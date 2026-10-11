@@ -188,7 +188,7 @@ class LgBackend implements RemoteBackend {
       'id': _nextId(),
       'type': 'request',
       'uri': uri,
-      if (payload != null) 'payload': payload,
+      'payload': ?payload,
     }));
   }
 
