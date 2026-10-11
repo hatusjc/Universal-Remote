@@ -1,0 +1,83 @@
+name: Android APK test build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-android-apk.yml'
+      - 'android/**'
+      - 'lib/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'test/**'
+
+permissions:
+  contents: write
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit tests
+        run: flutter test
+
+      - name: Build universal Android APK
+        run: flutter build apk --release
+
+      - name: Create downloadable files and checksum
+        run: |
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk Universal-Remote-universal-test.apk
+          sha256sum Universal-Remote-universal-test.apk > Universal-Remote-universal-test.apk.sha256
+
+      - name: Keep CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-remote-android-apk
+          path: |
+            Universal-Remote-universal-test.apk
+            Universal-Remote-universal-test.apk.sha256
+          retention-days: 30
+
+      - name: Publish public test release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-test.1
+          name: Universal Remote 1.0.0 — test APK
+          prerelease: true
+          body: |
+            Trial build of the open-source Universal Remote Android app (MIT license).
+            All features supplied by the original project are included; there is no paid Pro license.
+            This is a development/test build signed with Android debug credentials (NOT production-signed).
+            Test TV pairing and controls on your own trusted Wi-Fi network.
+            A TV's manufacturer/protocol determines which features work.
+          files: |
+            Universal-Remote-universal-test.apk
+            Universal-Remote-universal-test.apk.sha256
